@@ -1,0 +1,6 @@
+# Actions runners are Linux. CRLF in a workflow run: block becomes a literal
+# carriage return in bash (": command not found"), so normalize everything.
+* text=auto eol=lf
+
+*.png binary
+*.db binary

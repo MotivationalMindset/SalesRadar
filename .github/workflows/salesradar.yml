@@ -1,0 +1,84 @@
+name: SalesRadar
+
+# Every two hours, 7am-7pm Eastern, weekdays.
+#
+# GitHub cron is always UTC and does not follow daylight saving. 11:00-23:00
+# UTC is 7am-7pm during EDT (summer) and 6am-6pm during EST (winter). The hour
+# drift is deliberate: the alternative is two schedules and a date check, which
+# is more machinery than a one-hour shift is worth.
+on:
+  schedule:
+    - cron: "0 11,13,15,17,19,21,23 * * 1-5"
+  # Lets you run it by hand from the Actions tab — useful for the first test.
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run (filter only, send nothing)"
+        type: boolean
+        default: false
+
+# Two runs writing the database at once would clobber each other's commit.
+concurrency:
+  group: salesradar-state
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    permissions:
+      # Needed to commit the updated database back to the repo.
+      contents: write
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run SalesRadar
+        env:
+          ADZUNA_APP_ID: ${{ secrets.ADZUNA_APP_ID }}
+          ADZUNA_APP_KEY: ${{ secrets.ADZUNA_APP_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GMAIL_CLIENT_ID: ${{ secrets.GMAIL_CLIENT_ID }}
+          GMAIL_CLIENT_SECRET: ${{ secrets.GMAIL_CLIENT_SECRET }}
+          GMAIL_REFRESH_TOKEN: ${{ secrets.GMAIL_REFRESH_TOKEN }}
+          # Only needed if you enable the optional JSearch provider.
+          JSEARCH_API_KEY: ${{ secrets.JSEARCH_API_KEY }}
+        run: |
+          python -m salesradar ${{ inputs.dry_run && '--dry-run' || '' }}
+
+      - name: Commit the updated database
+        # `always()` so state is saved even when the run reported a failure —
+        # a half-finished run still learned which jobs it had already seen, and
+        # losing that means re-alerting them next time.
+        if: always() && !inputs.dry_run
+        run: |
+          git config user.name "salesradar-bot"
+          git config user.email "salesradar-bot@users.noreply.github.com"
+          git add -f data/salesradar.db
+          if git diff --staged --quiet; then
+            echo "No state changes to commit."
+            exit 0
+          fi
+          git commit -m "chore: update salesradar state [skip ci]"
+          # Another run may have pushed while this one worked. Rebase and retry
+          # rather than failing the job over a race.
+          for attempt in 1 2 3; do
+            if git push; then
+              echo "Pushed on attempt $attempt."
+              exit 0
+            fi
+            echo "Push rejected, rebasing and retrying..."
+            git pull --rebase --autostash || true
+          done
+          echo "::warning::Could not push updated state after 3 attempts."

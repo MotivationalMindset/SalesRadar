@@ -1,0 +1,17 @@
+# Never commit these — they are the keys to the mailbox and the API accounts.
+client_secret.json
+token.json
+.env
+*.pem
+
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+*.egg-info/
+
+# The database IS committed by the workflow (that's how state persists),
+# so it is deliberately not ignored here. Local scratch copies are:
+data/*.db-journal
+data/*.db-wal

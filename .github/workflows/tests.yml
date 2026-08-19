@@ -1,0 +1,30 @@
+name: Tests
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - run: pip install -r requirements-dev.txt
+
+      - name: Run the test suite
+        run: python -m pytest tests/ -v
+
+      - name: Check that config.yaml still parses
+        run: python -c "from salesradar.config import load_config; load_config('config.yaml'); print('config.yaml OK')"

@@ -1,0 +1,283 @@
+# SalesRadar configuration.
+#
+# Every filter rule lives in this file. You can retune the bot without touching
+# a line of Python. Run `python -m salesradar --dry-run` after editing to see
+# exactly what each rule would accept or reject and why.
+
+search:
+  # Locations to search. Each becomes its own Adzuna query.
+  locations:
+    - "Toronto"
+    - "Vaughan"
+  what: "sales"
+  max_days_old: 1
+  sort_by: "date"
+  results_per_page: 50
+  distance_km: 25
+  country: "ca"
+
+providers:
+  adzuna:
+    enabled: true
+    base_url: "https://api.adzuna.com/v1/api/jobs"
+  indeed_email:
+    enabled: true
+    # Gmail search query used to find unread alert mail.
+    senders:
+      - "alert@indeed.com"
+      - "noreply@indeed.com"
+    query: "is:unread from:({senders})"
+    max_messages: 25
+    mark_read_after_parse: true
+    # Indeed rewrites this HTML periodically. Selectors live here so a break is
+    # a config edit, not a code change. Each entry is tried in order; the first
+    # that matches wins. See tests/fixtures/indeed_alert.html for the shape
+    # these were written against.
+    selectors:
+      job_card:
+        - "td.job_card"
+        - "table[data-testid='job-card']"
+        - "div.jobcard"
+        - "a[href*='/rc/clk']"
+      title:
+        - "h2.jobTitle"
+        - "a[data-testid='job-title']"
+        - "td.title a"
+        - "a[href*='/rc/clk']"
+      company:
+        - "span.companyName"
+        - "[data-testid='company-name']"
+        - "span.company"
+      location:
+        - "div.companyLocation"
+        - "[data-testid='job-location']"
+        - "span.location"
+      salary:
+        - "div.salary-snippet"
+        - "[data-testid='salary-snippet']"
+        - "span.salaryText"
+      url:
+        - "a[href]"
+  jsearch:
+    # Optional second API provider (RapidAPI). Off by default — Adzuna plus the
+    # Indeed email parser already covers the ground. Turn on only if you have a
+    # RapidAPI key in JSEARCH_API_KEY.
+    enabled: false
+    host: "jsearch.p.rapidapi.com"
+    country: "ca"
+    date_posted: "today"
+    num_pages: 1
+
+filters:
+  freshness:
+    max_age_hours: 24
+    # A posting with no usable date is kept rather than dropped — the seen-jobs
+    # table stops it repeating, and a missed real job costs more than one extra
+    # alert.
+    keep_if_date_missing: true
+
+  commission:
+    # Highest-value filter. Be aggressive here.
+    #
+    # A posting is REJECTED when it trips a red flag and shows no evidence of a
+    # base salary. It is ACCEPTED when salary_min >= min_base_salary_cad or the
+    # description names a base. When the two signals genuinely conflict, it is
+    # flagged UNCERTAIN and surfaced with a warning rather than dropped.
+    min_base_salary_cad: 40000
+
+    # HARD flags. These contradict a base salary rather than coexisting with
+    # one, so pairing them with base evidence produces UNCERTAIN, not ACCEPT.
+    commission_only_phrases:
+      - "commission only"
+      - "commission-only"
+      - "100% commission"
+      - "100 % commission"
+      - "straight commission"
+
+    # SOFT flags. Only count when nothing establishes a base — "uncapped
+    # commission" beside a $70k base is what a good AE posting looks like, so
+    # treating it as suspicious would reject the best jobs on the board.
+    commission_phrases_needing_base:
+      - "uncapped commission"
+      - "commission based"
+      - "commission-based"
+
+    contractor_phrases:
+      - "1099"
+      - "independent contractor"
+      - "self-employed"
+      - "self employed"
+      - "own your own business"
+      - "be your own boss"
+      - "business owner opportunity"
+
+    # Tripped only when the posting also has no salary_min from the API.
+    hype_phrases_needing_salary:
+      - "unlimited earning potential"
+      - "unlimited income potential"
+      - "earning potential is unlimited"
+
+    # Known MLM / door-to-door / recruiting-mill operators. Case-insensitive
+    # substring match on title, company, or description.
+    mlm_companies:
+      - "primerica"
+      - "world financial group"
+      - "wfg"
+      - "cydcor"
+      - "smart circle"
+      - "vector marketing"
+      - "kirby"
+      - "cutco"
+      - "devon consulting"
+      - "credico"
+      - "appco"
+
+    # Each pair must ALL match for the rule to trip.
+    mlm_phrase_combos:
+      - ["no experience necessary", "earn $100k"]
+      - ["no experience necessary", "100k"]
+      - ["no experience required", "$100,000"]
+      - ["weekly pay", "no experience necessary"]
+
+    base_salary_phrases:
+      - "base salary"
+      - "base + commission"
+      - "base plus commission"
+      - "salary + commission"
+      - "salary plus commission"
+      - "annual base"
+      - "base pay"
+      - "guaranteed base"
+
+    # Regex for "$65,000 base" / "$65k base" style mentions.
+    # Single-quoted so backslashes stay literal — YAML double quotes would
+    # need every one of them doubled.
+    base_salary_regexes:
+      - '\$\s?[\d,]+(?:\.\d+)?\s?k?\s+base'
+      - 'base\s+of\s+\$\s?[\d,]+'
+
+  geo:
+    anchors:
+      - name: "Toronto"
+        lat: 43.6532
+        lon: -79.3832
+      - name: "Vaughan"
+        lat: 43.8361
+        lon: -79.4983
+    radius_km: 25
+    require_province: true
+    province_tokens:
+      - "ontario"
+      - " on"
+      - ", on"
+      - "on,"
+    # Rejected outright regardless of anything else.
+    reject_location_phrases:
+      - "united states"
+      - "remote - us"
+      - "remote (us)"
+      - "us remote"
+      - "usa"
+      - "u.s."
+    # A remote posting with no Ontario signal at all is rejected; a remote
+    # posting that names Ontario/Toronto/GTA is kept.
+    remote_tokens:
+      - "remote"
+      - "work from home"
+      - "wfh"
+    ontario_tokens:
+      - "ontario"
+      - "toronto"
+      - "gta"
+      - "greater toronto"
+      - "vaughan"
+      - "mississauga"
+      - "brampton"
+      - "markham"
+      - "richmond hill"
+      - "north york"
+      - "scarborough"
+      - "etobicoke"
+      - "thornhill"
+      - "concord"
+      - "woodbridge"
+      - "oakville"
+      - "burlington"
+      - "pickering"
+      - "ajax"
+      - "whitby"
+      - "oshawa"
+      - "newmarket"
+      - "aurora"
+    # When a posting has no coordinates, fall back to matching these tokens.
+    keep_if_coords_missing_and_ontario: true
+
+  title:
+    accept:
+      - "sdr"
+      - "bdr"
+      - "account executive"
+      - "inside sales"
+      - "sales development"
+      - "business development"
+      - "account manager"
+      - "sales representative"
+      - "sales rep"
+      - "sales associate manager"
+      - "client executive"
+      - "enterprise sales"
+      - "territory manager"
+      - "sales consultant"
+      # Accepted here, then filtered by conditional_reject below when the
+      # posting demands a P.Eng. A SaaS pre-sales engineer is a real target.
+      - "sales engineer"
+    reject:
+      - "retail sales associate"
+      - "floor associate"
+      - "sales floor"
+      - "automotive sales"
+      - "car sales"
+      - "auto sales"
+      - "dealership"
+      - "cashier"
+      - "merchandiser"
+      - "door to door"
+      - "door-to-door"
+      - "canvasser"
+    # Sales Engineer roles are rejected only when they demand a P.Eng.
+    conditional_reject:
+      - title_contains: "sales engineer"
+        description_contains:
+          - "p.eng"
+          - "p. eng"
+          - "professional engineer"
+          - "peo licence"
+          - "peo license"
+
+drafting:
+  enabled: true
+  model: "claude-sonnet-4-6"
+  max_tokens: 4096
+  resume_path: "resume.md"
+  # Jobs per Anthropic request. The resume is cached across calls, so a few
+  # jobs per request is the cheap sweet spot.
+  batch_size: 5
+  cover_letter_words: 120
+  resume_bullets: 3
+  interview_questions: 2
+  # Cached drafts are reused for this long, keyed by a hash of the posting.
+  cache_ttl_days: 30
+
+telegram:
+  parse_mode: "HTML"
+  # Stop a runaway provider from flooding the chat in one run.
+  max_alerts_per_run: 15
+  disable_web_page_preview: false
+
+storage:
+  db_path: "data/salesradar.db"
+
+logging:
+  level: "INFO"
+  # "json" for machine-readable Actions logs, "text" for local runs.
+  format: "json"

@@ -109,9 +109,14 @@ After editing, run a dry run to see what changed.
 ## Running it locally
 
 ```bash
+python3 -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements-dev.txt
 python -m salesradar --dry-run
 ```
+
+The venv is worth the extra line on macOS: a stock Mac has `python3` but no
+`python`, and a Homebrew Python refuses `pip install` outright with
+`externally-managed-environment`. Activating a venv resolves both.
 
 `--dry-run` fetches and filters, then prints every posting with the exact rule
 that accepted or rejected it. It sends nothing and records nothing.

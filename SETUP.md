@@ -184,34 +184,121 @@ After this, the bot runs unattended forever.
 
 ### 6b. Run the authorization once
 
-1. Install Python from **https://www.python.org/downloads/** if you don't have
-   it. **On Windows, tick "Add Python to PATH"** on the first install screen.
-2. Download your forked repository: on your GitHub repo page, click the green
-   **Code** button → **Download ZIP**, then unzip it.
-3. Move `client_secret.json` into that unzipped folder, next to `auth_gmail.py`.
-4. Open the folder, then open a terminal *in that folder*:
-   - **Windows:** click the address bar at the top of the File Explorer
-     window, type `cmd`, press Enter.
-   - **Mac:** right-click the folder → Services → New Terminal at Folder.
-5. Paste these two lines, pressing Enter after each:
+First, download your forked repository: on your GitHub repo page, click the
+green **Code** button → **Download ZIP**. Double-click the ZIP to unpack it.
+Then move `client_secret.json` into that unpacked folder, so it sits next to
+`auth_gmail.py`.
+
+Now follow the section for your computer.
+
+---
+
+#### On a Mac
+
+1. **Check whether you have Python.** Open **Terminal** (press `Cmd + Space`,
+   type `terminal`, press Enter) and paste:
+
+   ```
+   python3 --version
+   ```
+
+   If it prints a version number (3.9 or higher), you're set. If it says
+   "command not found", or offers to install developer tools, install Python
+   from **https://www.python.org/downloads/macos/** and then close and reopen
+   Terminal.
+
+2. **Point Terminal at the folder.** Type `cd` followed by a space — then
+   **drag the unpacked SalesRadar folder from Finder onto the Terminal
+   window** and let go. It fills in the path for you. Press Enter.
+
+   ```
+   cd 
+   ```
+
+   *(Don't hunt for a right-click option — macOS hides "New Terminal at
+   Folder" until you enable it in System Settings, so dragging is faster.)*
+
+3. **Set up an isolated Python environment.** Paste these two lines, pressing
+   Enter after each:
+
+   ```
+   python3 -m venv .venv
+   ```
+
+   ```
+   source .venv/bin/activate
+   ```
+
+   Your prompt now starts with `(.venv)`. This keeps SalesRadar's packages
+   away from the rest of your Mac, and it's also what makes the plain `python`
+   and `pip` commands work — on a stock Mac they don't exist otherwise.
+
+4. **Install and run.** Two more lines:
 
    ```
    pip install -r requirements.txt
+   ```
+
+   ```
    python auth_gmail.py
    ```
 
-6. A browser window opens. Sign in with the **new Gmail account**.
-7. You'll see **"Google hasn't verified this app"** — this is expected, it's
-   your own app. Click **Advanced** → **Go to SalesRadar (unsafe)**.
-8. Click **Continue** to grant access.
-9. The terminal prints three values. **Keep this window open** — you need all
-   three in the next step.
+5. Jump to **"What happens next"** below.
+
+> **If `pip install` fails with "externally-managed-environment"**, you skipped
+> step 3. Run those two `venv` lines and try again.
+
+---
+
+#### On Windows
+
+1. Install Python from **https://www.python.org/downloads/** if you don't have
+   it. **Tick "Add Python to PATH"** on the first install screen — it's easy
+   to miss and nothing works without it.
+2. Open the unpacked folder in File Explorer, click the **address bar** at the
+   top, type `cmd`, and press Enter.
+3. Paste these lines, pressing Enter after each:
+
+   ```
+   python -m venv .venv
+   ```
+
+   ```
+   .venv\Scripts\activate
+   ```
+
+   ```
+   pip install -r requirements.txt
+   ```
+
+   ```
+   python auth_gmail.py
+   ```
+
+---
+
+#### What happens next
+
+1. A browser window opens by itself. Sign in with the **new Gmail account**
+   from step 5a — not your personal one.
+2. You'll see **"Google hasn't verified this app"**. That's expected; it's
+   your own app, and Google flags anything that hasn't been through its review
+   process. Click **Advanced**, then **Go to SalesRadar (unsafe)**.
+3. Click **Continue** to grant access.
+4. Back in the terminal, three values are printed. **Leave this window open** —
+   you'll paste all three into GitHub in the next step.
+
+> **Nothing gets uploaded anywhere.** The authorization happens between your
+> browser and Google; the token is printed straight to your own terminal.
 
 > **Why can it modify and not just read?** After reading an alert email the bot
 > marks it read, so the next run doesn't process it again. Marking read is
 > technically a modification, which read-only permission forbids. If you'd
 > rather it never touch the mailbox at all, open `config.yaml`, set
-> `mark_read_after_parse: false`, and re-run `python auth_gmail.py --readonly`.
+> `mark_read_after_parse: false`, and re-run the authorization with
+> `python auth_gmail.py --readonly`. (Reopening Terminal later? Re-run
+> `source .venv/bin/activate` on a Mac, or `.venv\Scripts\activate` on
+> Windows, before the command works again.)
 
 ---
 

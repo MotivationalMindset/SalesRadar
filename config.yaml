@@ -255,6 +255,10 @@ filters:
           - "peo license"
 
 drafting:
+  # Set to false to run the whole bot with no Anthropic account and no cost.
+  # Alerts still carry the job, salary, freshness, apply link, and the
+  # Applied/Skip buttons — only the cover letter and resume bullets are
+  # dropped. ANTHROPIC_API_KEY becomes unnecessary and resume.md is never read.
   enabled: true
   model: "claude-sonnet-4-6"
   max_tokens: 4096

@@ -201,9 +201,17 @@ email read is a modification, and read-only forbids it. Set
 `python auth_gmail.py --readonly` if you'd rather the bot never touch the
 mailbox; the seen-jobs table absorbs the resulting re-reads.
 
-**Drafting fails soft.** If the Anthropic call fails for any reason, the alert
-still goes out with a "No draft generated" note. A missing cover letter is an
-inconvenience; a missed job posting is the actual failure.
+**Drafting is optional, and fails soft.** Set `drafting.enabled: false` in
+`config.yaml` and the whole bot runs with no AI account and no cost — you still
+get filtered alerts with apply links and the Applied/Skip buttons, just without
+the pre-written cover letter. Left on, a failed Anthropic call is equally
+survivable: the alert still goes out with a "No draft generated" note. A
+missing cover letter is an inconvenience; a missed job posting is the actual
+failure.
+
+Note that neither a Claude nor a ChatGPT subscription grants API access —
+those are separate products from the pay-as-you-go developer APIs, and a
+subscription can't be called from a script.
 
 **Indeed's email HTML drifts.** When the selectors stop matching, the parser
 raises and logs the raw HTML rather than quietly reporting zero jobs — a silent

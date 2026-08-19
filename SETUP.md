@@ -15,15 +15,20 @@ your phone. It never applies to anything — you read the alert and decide.
 
 ## Before you start
 
-You'll need accounts for five services. All free.
+You'll need accounts for four services, all free — plus one optional paid one
+if you want the application drafting.
 
-| What | Cost | Used for |
-|---|---|---|
-| GitHub | Free | Runs the bot on a schedule |
-| Adzuna | Free | Job listings from employer sites |
-| Telegram | Free | Where the alerts arrive |
-| Google | Free | A dedicated Gmail for Indeed alerts |
-| Anthropic | Pay as you go, a few dollars a month | Writes the application drafts |
+| What | Cost | Used for | |
+|---|---|---|---|
+| GitHub | Free | Runs the bot on a schedule | Required |
+| Adzuna | Free | Job listings from employer sites | Required |
+| Telegram | Free | Where the alerts arrive | Required |
+| Google | Free | A dedicated Gmail for Indeed alerts | Required |
+| Anthropic | ~$1–3/month | Writes the application drafts | **Optional** |
+
+Skipping the last one is a supported setup, not a degraded one — you still get
+every job alert, just without the pre-written cover letter. Step 3 covers both
+paths.
 
 ---
 
@@ -58,9 +63,41 @@ tracking systems.
 
 ---
 
-## Step 3 — Get your Anthropic API key
+## Step 3 — Application drafting (optional)
 
-This is what writes your cover-letter openers and resume tweaks.
+This is the part that writes your cover-letter openers and resume bullets.
+**You can skip it entirely** — everything else works without it, free.
+
+### Option A — Skip it (free, nothing to sign up for)
+
+You still get every job alert: title, company, salary, how fresh the posting
+is, the apply link, and the Applied/Skip buttons. You just write your own
+cover letter, which is what most people do anyway.
+
+1. In your repository, click on **`config.yaml`**.
+2. Click the **pencil icon** (Edit this file).
+3. Near the bottom, find the line that says `enabled: true` directly under
+   `drafting:` and change it to:
+
+   ```yaml
+   drafting:
+     enabled: false
+   ```
+
+4. Scroll down and click **Commit changes**.
+
+That's it. Skip step 8 too (no resume needed), and leave `ANTHROPIC_API_KEY`
+out of your secrets in step 7 — seven secrets instead of eight.
+
+You can switch this on later at any time by flipping the line back.
+
+### Option B — Turn drafting on
+
+> **This is not a Claude subscription, and a ChatGPT subscription won't work
+> here.** Chat subscriptions and developer APIs are separate products with
+> separate billing — a subscription can't be called by a script. What you're
+> creating below is a pay-as-you-go developer account with a small prepaid
+> balance on it.
 
 1. Go to **https://console.anthropic.com/**
 2. Sign up or sign in.
@@ -68,9 +105,12 @@ This is what writes your cover-letter openers and resume tweaks.
 4. Click **Create Key**, name it `SalesRadar`, and click **Add**.
 5. **Copy the key immediately** — it starts with `sk-ant-` and is shown only
    once. Paste it into a notes app for the moment.
-6. Go to **Billing** and add $5 of credit. At the volume SalesRadar runs, $5
-   lasts a long time — it drafts only for jobs that survive the filters, and
-   caches every draft it writes.
+6. Go to **Billing** and add $5 of credit.
+
+$5 lasts months at this volume. Drafts are only written for postings that
+survive all four filters — a handful a day — every draft is cached so a
+reappearing job never costs twice, and jobs are batched so your resume is sent
+once per batch rather than once per job. Expect $1–3 a month.
 
 ---
 
@@ -318,19 +358,22 @@ visible in the code or the logs.
 |---|---|
 | `ADZUNA_APP_ID` | Step 2, Application ID |
 | `ADZUNA_APP_KEY` | Step 2, Application Key |
-| `ANTHROPIC_API_KEY` | Step 3, starts with `sk-ant-` |
+| `ANTHROPIC_API_KEY` | Step 3 **Option B only** — skip this row if you chose Option A |
 | `TELEGRAM_BOT_TOKEN` | Step 4a, from BotFather |
 | `TELEGRAM_CHAT_ID` | Step 4b, the number |
 | `GMAIL_CLIENT_ID` | Step 6b terminal output |
 | `GMAIL_CLIENT_SECRET` | Step 6b terminal output |
 | `GMAIL_REFRESH_TOKEN` | Step 6b terminal output |
 
-Eight secrets. Names are case-sensitive, and a stray space at the end of a
-pasted value will break it.
+Eight secrets, or seven if you skipped drafting. Names are case-sensitive,
+and a stray space at the end of a pasted value will break it.
 
 ---
 
-## Step 8 — Add your resume
+## Step 8 — Add your resume (Option B only)
+
+**Skip this step entirely if you chose Option A in step 3.** The resume is only
+used as context for the drafting, so with drafting off it's never read.
 
 The drafts are only as good as what the bot knows about you. It is explicitly
 instructed never to invent an employer, a number, or a credential — so with the
